@@ -2,8 +2,16 @@ import numpy as np
 from sklearn.datasets import fetch_openml
 import os
 
+# Dynamically find the path to the 'data' folder
+# Get the directory where this script (data_loader.py) is
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Go up one level to the project root: e.g., .../Generative-Models-From-Scratch
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+# Construct the absolute path to the data file
+MNIST_DATA_PATH = os.path.join(PROJECT_ROOT, 'data', 'mnist_data.npz')
 
-def download_and_save_mnist(filename='../data/mnist_data.npz'):
+
+def download_and_save_mnist(filename=MNIST_DATA_PATH):
     # Create the directory if it doesn't exist
     directory = os.path.dirname(filename)
     if directory and not os.path.exists(directory):
@@ -51,7 +59,7 @@ def download_and_save_mnist(filename='../data/mnist_data.npz'):
     print("Data saved successfully.")
 
 
-def load_mnist(filename='mnist_data.npz'):
+def load_mnist(filename=MNIST_DATA_PATH):
     # Ensure the file exists before loading
     if not os.path.exists(filename):
         download_and_save_mnist(filename)
