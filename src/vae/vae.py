@@ -269,3 +269,36 @@ class VAE:
             ax.set_title(f"Sample {i+1}")
         
         plt.show()
+    
+
+    def save_model(self, filename):
+        """
+        Saves the model weights and configuration to a file.
+        """
+        directory = path.dirname(filename)
+        if directory:
+            makedirs(directory, exist_ok=True)
+
+        model_data = {
+            # Weights & Biases
+            "enc_W_1": self.enc_W_1, 
+            "enc_B_1": self.enc_B_1,
+            "W_mu": self.W_mu,
+            "B_mu": self.B_mu,
+            "W_sigma": self.W_sigma,
+            "B_sigma": self.B_sigma,
+            "dec_W_1": self.dec_W_1,
+            "dec_B_1": self.dec_B_1,
+            "dec_W_L": self.dec_W_L,
+            "dec_B_L": self.dec_B_L,
+            
+            # Hyperparameters
+            "config": {
+                "n": self.n,
+                "hidden_dim": self.hidden_layer_dim,
+                "k_latent": self.k_latent
+            }
+        }
+
+        dump(model_data, filename)
+        print(f"Model successfully saved to {filename}")
