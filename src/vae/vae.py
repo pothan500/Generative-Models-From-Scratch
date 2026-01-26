@@ -243,3 +243,29 @@ class VAE:
             self.dec_B_L, self.delta_dec_B_L, self.v_dec_B_L, self.s_dec_B_L
         )
     
+
+    def model_infer(self, num_samples):
+        """
+        Generates random noise vectors and visualises their decoded output.
+        """
+        # Generate random noise (z)
+        z_samples = np.random.randn(num_samples, self.k_latent)
+        
+        # Forward pass through decoder layers
+        dec_Z_1 = np.dot(z_samples, self.dec_W_1) + self.dec_B_1
+        dec_A_1 = self._relu(dec_Z_1)
+        
+        dec_Z_L = np.dot(dec_A_1, self.dec_W_L) + self.dec_B_L
+        x_decoded = self._sigmoid(dec_Z_L)
+        
+        # Plot images
+        fig, axes = plt.subplots(1, num_samples, figsize=(15, 3))
+        if num_samples == 1: axes = [axes]
+            
+        for i, ax in enumerate(axes):
+            digit = x_decoded[i].reshape(28, 28)
+            ax.imshow(digit, cmap='Greys_r')
+            ax.axis('off')
+            ax.set_title(f"Sample {i+1}")
+        
+        plt.show()
