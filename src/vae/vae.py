@@ -71,3 +71,91 @@ class VAE:
         self.X_hat = self.dec_A_L # (m, n)
 
         return self.X_hat, self.mu, self.sigma
+    
+
+    def relu_derivative(self, x):
+    # Derivative of ReLU: 1 if x > 0, else 0
+        return (x > 0).astype(float)
+
+    def sigmoid_derivative(self, matrix):
+        return self.sigmoid(matrix) * (1 - self.sigmoid(matrix))
+    
+
+    def backward_pass(self, alpha_hyper_param):
+        """
+        Performs one backward pass.
+        
+        :param alpha_hyper_param: Hyperparameter in the loss function to balance the MSE term and the KL divergence term
+        """
+        m = self.X.shape[0] # batch size
+
+        # calculate the reconstruction error
+        self.delta_recon_output = (-2/m) * (self.X - self.X_hat) * self.sigmoid_derivative(self.dec_Z_L)
+
+        # calculate the reconstruction error at the decoder output layer
+        self.delta_recon_dec_W_L = np.dot(self.dec_A_1.T, self.delta_recon_output)
+
+        # calculate the reconstruction error arriving at the decoder
+        self.delta_decoder = np.dot(self.delta_recon_output, self.dec_W_L.T) * self.relu_derivative(self.dec_Z_1)
+
+        # calculate the reconstruction error at the decoder first layer
+        self.delta_recon_dec_W_1 = np.dot(self.X_dec.T, self.delta_decoder)
+        
+        # calculate the reconstruction error arriving at the latent space for W_mu
+        self.delta_recon_latent_W_mu = np.dot(self.delta_decoder, self.dec_W_1.T)
+        # calculate reconstruction error at W_mu
+        self.delta_recon_W_mu = np.dot(self.enc_A_1.T, self.delta_recon_latent_W_mu)
+        # calculate the KL error for the mean
+        self.delta_KL_mu_output = (2/m) * self.mu
+        # calculate KL error at W_mu
+        self.delta_KL_W_mu = np.dot(self.enc_A_1.T, self.delta_KL_mu_output)
+
+        # calculate reconstruction arriving at the latent space for W_sigma
+        self.delta_recon_latent_W_sigma = np.dot(self.delta_decoder, self.dec_W_1.T) * self.epsilon
+        # calculate reconstruction error at W_sigma
+        self.delta_recon_W_sigma = np.dot(self.enc_A_1.T, (self.delta_recon_latent_W_sigma * self.sigma)) 
+        # calculate the KL error for the standard deviation
+        self.delta_KL_sigma_output = (2/m) * (self.sigma**2 - 1)
+        # calculate KL error at W_sigma
+        self.delta_KL_W_sigma = np.dot(self.enc_A_1.T, self.delta_KL_sigma_output) 
+        
+        # calculate the total error at W_mu
+        self.dL_total_dW_mu = self.delta_recon_W_mu + (alpha_hyper_param * self.delta_KL_W_mu)
+        # calculate total error at W_sigma
+        self.dL_total_dW_sigma = self.delta_recon_W_sigma + (alpha_hyper_param * self.delta_KL_W_sigma)
+        
+        # calculate total error from the mu branch
+        mu_branch = np.dot((self.delta_recon_latent_W_mu + (2*self.mu*alpha_hyper_param/m)), self.W_mu.T)
+        # calculate total error from the sigma branch
+        sigma_branch = np.dot(((self.delta_recon_latent_W_sigma * self.sigma) + ((2*alpha_hyper_param*(self.sigma**2 - 1)) / m)), self.W_sigma.T)
+        # calculate total error at enc_W_1
+        self.delta_enc_W_1 = np.dot(self.X.T, ((mu_branch + sigma_branch) * self.relu_derivative(self.enc_Z_1)))
+
+        # calculate all of the bias errors
+        self.delta_dec_B_L = np.sum(self.delta_recon_output, axis=0, keepdims=True)
+        self.delta_dec_B_1 = np.sum(self.delta_decoder, axis=0, keepdims=True)
+        self.delta_B_mu = np.sum(self.delta_recon_latent_W_mu + self.delta_KL_mu_output, axis=0, keepdims=True)
+        self.delta_B_sigma = np.sum((self.delta_recon_latent_W_sigma * self.sigma) + self.delta_KL_sigma_output, axis=0, keepdims=True)
+        self.delta_enc_B_1 = np.sum((mu_branch + sigma_branch) * self.relu_derivative(self.enc_Z_1), axis=0, keepdims=True)
+    
+
+    def GD_update_step(self):
+        alpha_lr = self.learning_rate
+
+        # 1. Update Encoder Weights & Biases
+        self.enc_W_1 -= alpha_lr * self.delta_enc_W_1
+        self.enc_B_1 -= alpha_lr * self.delta_enc_B_1
+
+        # 2. Update Latent Weights & Biases
+        self.W_mu -= alpha_lr * self.dL_total_dW_mu
+        self.B_mu -= alpha_lr * self.delta_B_mu
+
+        self.W_sigma -= alpha_lr * self.dL_total_dW_sigma
+        self.B_sigma -= alpha_lr * self.delta_B_sigma
+
+        # 3. Update Decoder Weights & Biases
+        self.dec_W_1 -= alpha_lr * self.delta_recon_dec_W_1
+        self.dec_B_1 -= alpha_lr * self.delta_dec_B_1
+
+        self.dec_W_L -= alpha_lr * self.delta_recon_dec_W_L
+        self.dec_B_L -= alpha_lr * self.delta_dec_B_L
