@@ -1,25 +1,55 @@
 import numpy as np
 
-class DiscriminatorOutputLayer:
+class Layer:
     def __init__(self, input_dim, output_dim):
-        scale_factor = np.sqrt(1.0 / input_dim)
-        
-        self.W = np.random.randn(input_dim, output_dim) * scale_factor
+        # Initialise everything except the Weight matrix because there's a different scale factor in each class
         self.B = np.zeros((1, output_dim))
         
         self.X_input = None
 
-        # Initialise gradients with Zeros (so we can add to them)
-        self.dL_dW = np.zeros_like(self.W)
-        self.dL_dB = np.zeros_like(self.B)
+        # Initialise gradients with Zeros (so we can add to them later during backpropagation)
+        self.dL_dW = np.zeros((input_dim, output_dim))
+        self.dL_dB = np.zeros((1, output_dim))
+    
+
+    def forward(self):
+        return "Forward Pass"
+    
+
+    def backward(self):
+        return "Backward Pass"
 
 
     def _relu(self, matrix):
         return np.maximum(0, matrix)
+    
+
+    def _relu_derivative(self, x):
+        # Derivative of _ReLU: 1 if x > 0, else 0
+        return (x > 0).astype(float)
+
 
     def _sigmoid(self, matrix):
         return 1 / (1 + np.exp(-matrix))
+
     
+    def _sigmoid_derivative(self, matrix):
+        return self._sigmoid(matrix) * (1 - self._sigmoid(matrix))
+
+
+    def reset_gradients(self):
+        # We need to empty the bucket before a new epoch
+        self.dL_dW.fill(0)
+        self.dL_dB.fill(0)
+    
+
+class DiscriminatorOutputLayer(Layer):
+    def __init__(self, input_dim, output_dim):
+        super().__init__(input_dim, output_dim)
+        
+        scale_factor = np.sqrt(1.0 / input_dim)
+        self.W = np.random.randn(input_dim, output_dim) * scale_factor
+
 
     def forward(self, previous_layer_A):
         self.X_input = previous_layer_A # input to the output layer is the post-activation output from the previous layer
@@ -27,12 +57,6 @@ class DiscriminatorOutputLayer:
         self.A = self._sigmoid(self.Z)
 
         return self.A # this A will be the prediction
-    
-
-    def reset_gradient(self):
-        # We need to empty the bucket before a new epoch
-        self.dL_dW.fill(0)
-        self.dL_dB.fill(0)
 
 
     def backward(self, y_target):
@@ -48,23 +72,12 @@ class DiscriminatorOutputLayer:
         return gradient_to_pass_back
 
 
-class DiscriminatorLayer:
+class DiscriminatorLayer(Layer):
     def __init__(self, input_dim, output_dim):
-        scale_factor = np.sqrt(2.0 / input_dim)
-        
-        self.W = np.random.randn(input_dim, output_dim) * scale_factor
-        self.B = np.zeros((1, output_dim))
-        
-        self.X_input = None
-        self.Z = None
+        super().__init__(input_dim, output_dim)
 
-        # Initialise gradients with Zeros (so we can add to them)
-        self.dL_dW = np.zeros_like(self.W)
-        self.dL_dB = np.zeros_like(self.B)
-    
-    
-    def _relu(self, matrix):
-        return np.maximum(0, matrix)
+        scale_factor = np.sqrt(2.0 / input_dim)
+        self.W = np.random.randn(input_dim, output_dim) * scale_factor
 
 
     def forward(self, previous_layer_A):
@@ -73,17 +86,6 @@ class DiscriminatorLayer:
         self.A = self._relu(self.Z)
         
         return self.A
-
-
-    def _relu_derivative(self, x):
-        # Derivative of _ReLU: 1 if x > 0, else 0
-        return (x > 0).astype(float)
-
-
-    def reset_gradient(self):
-        # We need to empty the bucket before a new epoch
-        self.dL_dW.fill(0)
-        self.dL_dB.fill(0)
 
 
     def backward(self, gradient_flowing_back):
@@ -97,27 +99,12 @@ class DiscriminatorLayer:
         return gradient_to_pass_back
 
 
-class GeneratorOutputLayer():
+class GeneratorOutputLayer(Layer):
     def __init__(self, input_dim, output_dim):
+        super().__init__(input_dim, output_dim)
+        
         scale_factor = np.sqrt(1.0 / input_dim)
-        
         self.W = np.random.randn(input_dim, output_dim) * scale_factor
-        self.B = np.zeros((1, output_dim))
-        
-        self.X_input = None
-        self.Z = None
-        
-        self.dL_dW = np.zeros_like(self.W)
-        self.dL_dB = np.zeros_like(self.B)
-    
-
-    def _sigmoid(self, matrix):
-        return 1 / (1 + np.exp(-matrix))
-
-
-    def reset_gradient(self):
-        self.dL_dW.fill(0)
-        self.dL_dB.fill(0)
 
 
     def forward(self, previous_layer_A):
@@ -126,10 +113,6 @@ class GeneratorOutputLayer():
         self.A = self._sigmoid(self.Z)
         
         return self.A
-
-
-    def _sigmoid_derivative(self, matrix):
-        return self._sigmoid(matrix) * (1 - self._sigmoid(matrix))
 
 
     def backward(self, gradient_flowing_back_from_discriminator):
@@ -143,23 +126,12 @@ class GeneratorOutputLayer():
         return gradient_to_pass_back
 
 
-class GeneratorLayer():
+class GeneratorLayer(Layer):
     def __init__(self, input_dim, output_dim):
-        scale_factor = np.sqrt(2.0 / input_dim)
-        
-        self.W = np.random.randn(input_dim, output_dim) * scale_factor
-        self.B = np.zeros((1, output_dim))
-        
-        self.X_input = None
-        self.Z = None
+        super().__init__(input_dim, output_dim)
 
-        # Initialise gradients with Zeros (so we can add to them)
-        self.dL_dW = np.zeros_like(self.W)
-        self.dL_dB = np.zeros_like(self.B)
-    
-    
-    def _relu(self, matrix):
-        return np.maximum(0, matrix)
+        scale_factor = np.sqrt(2.0 / input_dim)
+        self.W = np.random.randn(input_dim, output_dim) * scale_factor
 
 
     def forward(self, previous_layer_A):
@@ -168,17 +140,6 @@ class GeneratorLayer():
         self.A = self._relu(self.Z)
         
         return self.A
-
-
-    def _relu_derivative(self, x):
-        # Derivative of _ReLU: 1 if x > 0, else 0
-        return (x > 0).astype(float)
-
-
-    def reset_gradient(self):
-        # We need to empty the bucket before a new epoch
-        self.dL_dW.fill(0)
-        self.dL_dB.fill(0)
 
 
     def backward(self, gradient_flowing_back):
@@ -190,5 +151,4 @@ class GeneratorLayer():
         gradient_to_pass_back = np.dot(error, self.W.T)
 
         return gradient_to_pass_back
-
 
