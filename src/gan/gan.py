@@ -1,10 +1,12 @@
 from layers import GeneratorLayer, GeneratorOutputLayer, DiscriminatorLayer, DiscriminatorOutputLayer
+import matplotlib.pyplot as plt
+import numpy as np
 
 class GAN:
-    def __init__(self, latent_vector_dim, output_dim, learning_rate=0.001):
+    def __init__(self, latent_vector_dim, output_dim, lr=0.001):
         self.input_dim = latent_vector_dim  # dimensionality of the latent vector Z_rand
         self.output_dim = output_dim    # dimensionality of an MNIST image is 28*28 = 784
-        self.learning_rate = learning_rate
+        self.learning_rate = lr
 
         self.generator_layers = [
             GeneratorLayer(self.input_dim, 256),
@@ -58,9 +60,72 @@ class GAN:
     def reset_gradients(self):
         for layer in (self.generator_layers + self.discriminator_layers):
             layer.set_gradients_zero()
-    
 
-    def GD_update_step(self):
-        for layer in (self.generator_layers + self.discriminator_layers):
+
+    def generator_GD_update_step(self):
+        for layer in self.generator_layers:
             layer.W -= self.learning_rate * layer.dL_dW
             layer.B -= self.learning_rate * layer.dL_dB
+
+
+    def discriminator_GD_update_step(self):
+        for layer in self.discriminator_layers:
+            layer.W -= self.learning_rate * layer.dL_dW
+            layer.B -= self.learning_rate * layer.dL_dB
+    
+
+    def infer(self, num_samples):
+        """
+        Generates random noise, passes it through the Generator and displays the image.
+        """
+        # Generate Noise Vector z
+        z_noise = np.random.randn(num_samples, self.input_dim)
+        
+        # Forward Pass through Generator
+        generated_images = self.gen_forward(z_noise)
+        
+        side_len = int(np.sqrt(self.output_dim))
+        
+        fig, axes = plt.subplots(1, num_samples, figsize=(15, 3))
+        if num_samples == 1: axes = [axes] # Handle single image case
+            
+        for i, ax in enumerate(axes):
+            img = generated_images[i].reshape(side_len, side_len)
+            
+            ax.imshow(img, cmap='Greys_r')
+            ax.axis('off')
+            ax.set_title(f"Gen {i+1}")
+        
+        plt.show()
+    
+
+    def save_model(self, filename):
+        """
+        Saves the model weights to a file.
+        """
+        import os
+        from joblib import dump
+        
+        directory = os.path.dirname(filename)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+
+        model_data = {
+            # Generator Weights
+            "gen_layers": [
+                {"W": layer.W, "B": layer.B} for layer in self.generator_layers
+            ],
+            # Discriminator Weights
+            "disc_layers": [
+                {"W": layer.W, "B": layer.B} for layer in self.discriminator_layers
+            ],
+            # Hyperparameters
+            "config": {
+                "input_dim": self.input_dim,
+                "output_dim": self.output_dim,
+                "lr": self.lr
+            }
+        }
+
+        dump(model_data, filename)
+        print(f"GAN model successfully saved to {filename}")
