@@ -13,29 +13,35 @@ class Layer:
         self.dL_dB = np.zeros((1, output_dim))
     
 
-    def forward(self):
-        return "Forward Pass"
-    
+    def forward(self): return "Forward Pass"
 
-    def backward(self):
-        return "Backward Pass"
+    def backward(self): return "Backward Pass"
 
-
+    """ Activation Functions """
     def _relu(self, matrix):
         return np.maximum(0, matrix)
+
+    def _sigmoid(self, matrix):
+        return 1 / (1 + np.exp(-matrix))
+    
+    def _leaky_relu(self, matrix):
+        # Leaky ReLU: If x < 0, return 0.01 * x
+        return np.maximum(0.01 * matrix, matrix)
     
 
+    """ Activation Function Derivatives for Backpropagation """
     def _relu_derivative(self, x):
         # Derivative of _ReLU: 1 if x > 0, else 0
         return (x > 0).astype(float)
 
-
-    def _sigmoid(self, matrix):
-        return 1 / (1 + np.exp(-matrix))
-
-    
     def _sigmoid_derivative(self, matrix):
         return self._sigmoid(matrix) * (1 - self._sigmoid(matrix))
+
+    def _leaky_relu_derivative(self, x):
+        # Derivative: 1 if x > 0, else 0.01
+        dx = np.ones_like(x)
+        dx[x < 0] = 0.01
+        return dx
 
 
     def set_gradients_zero(self):
@@ -84,13 +90,13 @@ class DiscriminatorLayer(Layer):
     def forward(self, previous_layer_A):
         self.X_input = previous_layer_A
         self.Z = np.dot(self.X_input, self.W) + self.B
-        self.A = self._relu(self.Z)
+        self.A = self._leaky_relu(self.Z)
         
         return self.A
 
 
     def backward(self, gradient_flowing_back):
-        error = gradient_flowing_back * self._relu_derivative(self.Z)
+        error = gradient_flowing_back * self._leaky_relu_derivative(self.Z)
         
         self.dL_dW += np.dot(self.X_input.T, error)
         self.dL_dB += np.sum(error, axis=0, keepdims=True)
@@ -138,13 +144,13 @@ class GeneratorLayer(Layer):
     def forward(self, previous_layer_A):
         self.X_input = previous_layer_A
         self.Z = np.dot(self.X_input, self.W) + self.B
-        self.A = self._relu(self.Z)
+        self.A = self._leaky_relu(self.Z)
         
         return self.A
 
 
     def backward(self, gradient_flowing_back):
-        error = gradient_flowing_back * self._relu_derivative(self.Z)
+        error = gradient_flowing_back * self._leaky_relu_derivative(self.Z)
         
         self.dL_dW += np.dot(self.X_input.T, error)
         self.dL_dB += np.sum(error, axis=0, keepdims=True)
