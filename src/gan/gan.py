@@ -2,6 +2,10 @@ from layers import GeneratorLayer, GeneratorOutputLayer, DiscriminatorLayer, Dis
 import matplotlib.pyplot as plt
 import numpy as np
 
+from os import makedirs, path
+from joblib import dump
+
+
 class GAN:
     def __init__(self, latent_vector_dim, output_dim, lr=0.001):
         self.input_dim = latent_vector_dim  # dimensionality of the latent vector Z_rand
@@ -103,12 +107,9 @@ class GAN:
         """
         Saves the model weights to a file.
         """
-        import os
-        from joblib import dump
-        
-        directory = os.path.dirname(filename)
+        directory = path.dirname(filename)
         if directory:
-            os.makedirs(directory, exist_ok=True)
+            makedirs(directory, exist_ok=True)
 
         model_data = {
             # Generator Weights
@@ -123,7 +124,7 @@ class GAN:
             "config": {
                 "input_dim": self.input_dim,
                 "output_dim": self.output_dim,
-                "lr": self.lr
+                "lr": self.learning_rate
             }
         }
 
